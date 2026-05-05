@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Bumen · Check-in</title>
+<style>
+  :root {
+    --gold: #B8975A;
+    --gold-bg: #FBF6EE;
+    --dark: #1C1C1E;
+    --mid: #48484A;
+    --muted: #8E8E93;
+    --border: #E5E5EA;
+    --surface: #F2F2F7;
+    --white: #FFFFFF;
+    --green: #34C759;
+    --green-bg: #F0FBF3;
+    --red: #FF3B30;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    background: var(--surface);
+    color: var(--dark);
+    min-height: 100vh;
+  }
+
+  /* ── ADMIN VIEW ── */
+  #adminView { display: block; }
+  #guideView  { display: none; }
+
+  .admin-header {
+    background: var(--white);
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .admin-header h1 {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--dark);
+  }
+  .admin-header p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .section {
+    background: var(--white);
+    margin: 12px 16px;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 14px 16px 6px;
+  }
+
+  .field {
+    padding: 0 16px 14px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .field input[type=text],
+  .field select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 16px;
+    font-family: inherit;
+    color: var(--dark);
+    background: var(--white);
+    outline: none;
+    -webkit-appearance: none;
+  }
+  .field input[type=text]:focus,
+  .field select:focus {
+    border-color: var(--gold);
+  }
+
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238E8E93' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 0 16px; }
+
+  /* QR upload area */
+  .qr-upload {
+    margin: 0 16px 14px;
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+  .qr-upload .upload-icon { font-size: 28px; margin-bottom: 8px; }
+  .qr-upload .upload-text { font-size: 14px; font-weight: 500; color: var(--dark); margin-bottom: 12px; }
+  .qr-upload .upload-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .upload-btn {
+    display: inline-block;
+    background: var(--gold);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 24px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  #qrFileInput { display: none; }
+  .qr-preview { display: none; }
+  .qr-preview img { width: 100%; max-width: 200px; height: auto; border-radius: 8px; display: block; margin: 0 auto; }
+  .qr-preview .remove-qr {
+    font-size: 13px;
+    color: var(--red);
+    margin-top: 8px;
+    cursor: pointer;
+    display: inline-block;
+  }
+
+  /* PIN input */
+  .pin-input-wrap { position: relative; }
+  .pin-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px;
+    user-select: none;
+  }
+
+  /* Fixed PIN badge */
+  .pin-fixed-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--green-bg);
+    border: 1px solid #C6F0D0;
+    border-radius: 10px;
+  }
+  .pin-fixed-val {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--dark);
+    font-family: 'Courier New', monospace;
+  }
+  .pin-fixed-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: #1A7A35;
+    background: #C6F0D0;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+
+  /* Two-doors note */
+  .two-doors-note {
+    display: none;
+    margin: 0 16px 14px;
+    background: #FFF8EC;
+    border: 1px solid #FADDAA;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #7A5500;
+    line-height: 1.5;
+  }
+
+  /* Generate button */
+  .btn-generate {
+    display: block;
+    width: calc(100% - 32px);
+    margin: 8px 16px 24px;
+    padding: 16px;
+    background: var(--gold);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 17px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+  .btn-generate:active { opacity: 0.85; transform: scale(0.98); }
+
+  /* ── GUIDE VIEW (what guest sees / prints) ── */
+  #guideView {
+    background: white;
+    min-height: 100vh;
+  }
+
+  .guide-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: white;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .guide-topbar .back-btn {
+    font-size: 15px;
+    color: var(--gold);
+    cursor: pointer;
+    font-weight: 500;
+    padding: 4px 0;
+  }
+  .btn-print {
+    background: var(--gold);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .guide-body { padding: 0 0 40px; }
+
+  /* Guide hero */
+  .guide-hero {
+    background: var(--dark);
+    padding: 28px 24px 24px;
+    color: white;
+    text-align: center;
+  }
+  .guide-hero .brand {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .guide-hero h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .guide-hero .address-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.8);
+    margin-top: 8px;
+  }
+
+  /* Step card */
+  .step-card {
+    margin: 16px 16px 0;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-header-text { flex: 1; }
+  .step-header-text .es { font-size: 15px; font-weight: 600; color: var(--dark); }
+  .step-header-text .en { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  .step-body { padding: 16px; }
+  .step-body .es { font-size: 14px; color: var(--dark); line-height: 1.6; margin-bottom: 4px; }
+  .step-body .en { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* QR display in guide */
+  .qr-display {
+    margin: 14px 0 0;
+    text-align: center;
+  }
+  .qr-display img {
+    width: 180px;
+    height: 180px;
+    object-fit: contain;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 8px;
+    background: white;
+  }
+  .qr-display .qr-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  /* PIN display in guide */
+  .pin-display {
+    margin: 14px 0 0;
+    text-align: center;
+  }
+  .pin-digits {
+    display: inline-flex;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+  }
+  .pin-d {
+    width: 36px;
+    height: 46px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--dark);
+    font-family: 'Courier New', monospace;
+  }
+  .pin-d.hash {
+    color: var(--gold);
+    font-size: 18px;
+  }
+  .pin-display .pin-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 10px;
+  }
+
+  /* Two-doors step */
+  .two-doors-tag {
+    display: inline-block;
+    background: #FFF8EC;
+    color: #7A5500;
+    border: 1px solid #FADDAA;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* Contact card */
+  .contact-card {
+    margin: 16px 16px 0;
+    background: var(--dark);
+    border-radius: 16px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .contact-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    flex-shrink: 0;
+  }
+  .contact-info { flex: 1; }
+  .contact-info .name { font-size: 15px; font-weight: 600; color: white; }
+  .contact-info .role { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  .contact-info .phone { font-size: 14px; color: var(--gold); margin-top: 6px; font-weight: 500; }
+  .wa-btn {
+    background: #25D366;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  /* Print styles */
+  @media print {
+    .guide-topbar { display: none !important; }
+    #adminView { display: none !important; }
+    #guideView { display: block !important; }
+    .step-card { break-inside: avoid; page-break-inside: avoid; }
+    body { background: white; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════ ADMIN VIEW ═══════════════════════════════════════ -->
+<div id="adminView">
+  <div class="admin-header">
+    <h1>Bumen · Nueva guía de ingreso</h1>
+    <p>Completá los datos para el huésped</p>
+  </div>
+
+  <!-- Propiedad -->
+  <div class="section">
+    <div class="section-title">Propiedad</div>
+    <div class="field">
+      <label>Seleccioná el departamento</label>
+      <select id="propSelect" onchange="onPropChange()">
+        <option value="">— elegí uno —</option>
+        <option value="0">Arévalo 2045 · Depto 501 · Piso 5</option>
+        <option value="1">Arévalo 2045 · Depto 502 · Piso 5</option>
+        <option value="2">Carranza 2075 · Depto 402 · Piso 4</option>
+        <option value="3">Guatemala 5826 · Depto 201 · Piso 2</option>
+        <option value="4">Guatemala 5826 · Depto 502 · Piso 5</option>
+      </select>
+    </div>
+    <div class="two-doors-note" id="twoDoorsNote">
+      🔑 Este edificio tiene <strong>dos puertas</strong> — el mismo código QR abre las dos.
+    </div>
+  </div>
+
+  <!-- Huésped -->
+  <div class="section">
+    <div class="section-title">Huésped</div>
+    <div class="field">
+      <label>Nombre</label>
+      <input type="text" id="guestName" placeholder="Ej: María García" autocomplete="off" />
+    </div>
+  </div>
+
+  <!-- QR -->
+  <div class="section">
+    <div class="section-title">Código QR del edificio</div>
+    <input type="file" accept="image/*" id="qrFileInput" onchange="onQRUpload(event)" style="display:none" />
+    <div class="qr-upload" id="qrUploadArea">
+      <div class="upload-icon">📷</div>
+      <div class="upload-text">Imagen del QR</div>
+      <button class="upload-btn" type="button" onclick="document.getElementById('qrFileInput').click()">Subir imagen</button>
+      <div class="upload-sub" style="margin-top:10px;">Cámara o galería</div>
+    </div>
+    <div class="qr-preview" id="qrPreview">
+      <img id="qrImg" src="" alt="QR" />
+      <span class="remove-qr" onclick="removeQR()">✕ Quitar imagen</span>
+    </div>
+  </div>
+
+  <!-- PIN -->
+  <div class="section" id="pinSection">
+    <div class="section-title">PIN del departamento</div>
+    <div class="field" id="pinField">
+      <!-- filled dynamically -->
+    </div>
+  </div>
+
+  <button class="btn-generate" onclick="generateGuide()">Generar guía →</button>
+</div>
+
+<!-- ═══════════════════════════════════════ GUIDE VIEW ═══════════════════════════════════════ -->
+<div id="guideView">
+  <div class="guide-topbar">
+    <span class="back-btn" onclick="goBack()">← Volver</span>
+    <span style="font-size:13px; font-weight:600; color:var(--muted)" id="guidePropLabel"></span>
+    <button class="btn-print" onclick="printGuide()">Guardar PDF</button>
+  </div>
+
+  <div class="guide-body" id="guideBody">
+    <!-- filled dynamically -->
+  </div>
+</div>
+
+<script>
+const PROPS = [
+  { addr: "Arévalo 2045", depto: "501", piso: "5", pinFixed: "785278#", twoDoors: false },
+  { addr: "Arévalo 2045", depto: "502", piso: "5", pinFixed: "369536#", twoDoors: false },
+  { addr: "Carranza 2075", depto: "402", piso: "4", pinFixed: null,      twoDoors: true  },
+  { addr: "Guatemala 5826", depto: "201", piso: "2", pinFixed: null,     twoDoors: true  },
+  { addr: "Guatemala 5826", depto: "502", piso: "5", pinFixed: null,     twoDoors: true  },
+];
+
+let qrDataUrl = null;
+
+function onPropChange() {
+  const idx = document.getElementById('propSelect').value;
+  const note = document.getElementById('twoDoorsNote');
+  const pinField = document.getElementById('pinField');
+
+  if (idx === '') {
+    note.style.display = 'none';
+    pinField.innerHTML = '<p style="font-size:13px;color:var(--muted);padding-bottom:4px;">Primero seleccioná una propiedad</p>';
+    return;
+  }
+
+  const p = PROPS[+idx];
+  note.style.display = p.twoDoors ? 'block' : 'none';
+
+  if (p.pinFixed) {
+    pinField.innerHTML = `
+      <label>PIN (fijo para este depto)</label>
+      <div class="pin-fixed-box">
+        <span class="pin-fixed-val">${p.pinFixed}</span>
+        <span class="pin-fixed-badge">Fijo</span>
+      </div>`;
+  } else {
+    pinField.innerHTML = `
+      <label>Ingresá el PIN del huésped</label>
+      <div class="pin-input-wrap">
+        <input type="text" id="pinInput" placeholder="Ej: 4821#" inputmode="numeric" />
+        <span class="pin-toggle" onclick="togglePin()">mostrar</span>
+      </div>`;
+    document.getElementById('pinInput').type = 'password';
+  }
+}
+
+function togglePin() {
+  const inp = document.getElementById('pinInput');
+  const tog = document.querySelector('.pin-toggle');
+  if (inp.type === 'password') { inp.type = 'text'; tog.textContent = 'ocultar'; }
+  else { inp.type = 'password'; tog.textContent = 'mostrar'; }
+}
+
+function onQRUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    qrDataUrl = ev.target.result;
+    document.getElementById('qrUploadArea').style.display = 'none';
+    const preview = document.getElementById('qrPreview');
+    preview.style.display = 'block';
+    preview.style.padding = '0 16px 16px';
+    document.getElementById('qrImg').src = qrDataUrl;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeQR() {
+  qrDataUrl = null;
+  document.getElementById('qrFileInput').value = '';
+  document.getElementById('qrPreview').style.display = 'none';
+  document.getElementById('qrUploadArea').style.display = 'block';
+}
+
+function generateGuide() {
+  const idx = document.getElementById('propSelect').value;
+  const name = document.getElementById('guestName').value.trim();
+
+  if (idx === '') { alert('Seleccioná una propiedad.'); return; }
+  if (!name) { alert('Ingresá el nombre del huésped.'); return; }
+  if (!qrDataUrl) { alert('Subí la imagen del QR.'); return; }
+
+  const p = PROPS[+idx];
+  let pin = p.pinFixed;
+  if (!pin) {
+    const inp = document.getElementById('pinInput');
+    pin = inp ? inp.value.trim() : '';
+    if (!pin) { alert('Ingresá el PIN del departamento.'); return; }
+  }
+
+  buildGuide(name, p, pin);
+  document.getElementById('adminView').style.display = 'none';
+  document.getElementById('guideView').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+function buildGuide(name, p, pin) {
+  document.getElementById('guidePropLabel').textContent = `${p.addr} · ${p.depto}`;
+
+  const twoDoorNote = p.twoDoors
+    ? `<span class="two-doors-tag">2 puertas / 2 doors</span>` : '';
+
+  const pinChars = pin.split('').map(c =>
+    `<div class="pin-d${c==='#'?' hash':''}">${c}</div>`
+  ).join('');
+
+  const doorsES = p.twoDoors
+    ? 'Hay <strong>dos puertas</strong> para cruzar — el mismo QR abre las dos. Esperá que cada una se abra antes de avanzar.'
+    : 'Acercá el QR a la cámara del panel y esperá que la pantalla diga <strong>"Puerta abierta"</strong>.';
+  const doorsEN = p.twoDoors
+    ? 'There are <strong>two doors</strong> to cross — the same QR opens both. Wait for each door to open before moving forward.'
+    : 'Hold your QR up to the panel camera and wait until the screen shows <strong>"Puerta abierta"</strong> (Door open).';
+
+  document.getElementById('guideBody').innerHTML = `
+    <div class="guide-hero">
+      <div class="brand">Bumen</div>
+      <h2>¡Bienvenido/a, ${name}!</h2>
+      <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:4px;">Welcome!</div>
+      <div class="address-badge">${p.addr} · Depto ${p.depto} · Piso ${p.piso}</div>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div class="step-header-text">
+          <div class="es">Llegás al edificio ${twoDoorNote}</div>
+          <div class="en">Arriving at the building</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="es">Buscá el panel de acceso en la entrada. Tiene una pequeña pantalla táctil.</div>
+        <div class="en">Look for the access panel at the entrance. It has a small touchscreen.</div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div class="step-header-text">
+          <div class="es">Escaneá tu código QR</div>
+          <div class="en">Scan your QR code</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="es">${doorsES}</div>
+        <div class="en">${doorsEN}</div>
+        <div class="qr-display">
+          <img src="${qrDataUrl}" alt="Código QR" />
+          <div class="qr-label">Mostrá esta imagen en el panel · Show this image at the panel</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <div class="step-header-text">
+          <div class="es">Subí al piso ${p.piso}</div>
+          <div class="en">Go up to floor ${p.piso}</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="es">Tomá el ascensor hasta el <strong>piso ${p.piso}</strong> y buscá el depto <strong>${p.depto}</strong>.</div>
+        <div class="en">Take the elevator to <strong>floor ${p.piso}</strong> and find apartment <strong>${p.depto}</strong>.</div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">4</div>
+        <div class="step-header-text">
+          <div class="es">Ingresá tu PIN en la puerta</div>
+          <div class="en">Enter your PIN at the door</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="es">Tocá el sensor para activar la cerradura, ingresá el código y esperá el clic.</div>
+        <div class="en">Touch the sensor to wake the lock, enter the code, and wait for the click.</div>
+        <div class="pin-display">
+          <div class="pin-digits">${pinChars}</div>
+          <div class="pin-label">Ingresá este código · Enter this code</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 5 (success) -->
+    <div class="step-card" style="border-color:#C6F0D0;">
+      <div class="step-header" style="background:#F0FBF3; border-bottom-color:#C6F0D0;">
+        <div class="step-num" style="background:#34C759;">✓</div>
+        <div class="step-header-text">
+          <div class="es" style="color:#1A7A35;">¡Ya estás adentro!</div>
+          <div class="en" style="color:#2A9D50;">You're in! Enjoy your stay.</div>
+        </div>
+      </div>
+      <div class="step-body">
+        <div class="es" style="color:var(--mid);">Si tenés algún problema, escribile a tu anfitrión:</div>
+        <div class="en" style="color:var(--muted);">If you need help, contact your host:</div>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="contact-card">
+      <div class="contact-avatar">G</div>
+      <div class="contact-info">
+        <div class="name">Gonzalo</div>
+        <div class="role">Tu anfitrión · Your host</div>
+        <div class="phone">+54 9 11 3043 7852</div>
+      </div>
+      <a class="wa-btn" href="https://wa.me/5491130437852" target="_blank">WhatsApp</a>
+    </div>
+
+    <div style="text-align:center;padding:32px 16px 8px;font-size:12px;color:var(--muted);">
+      Bumen · bienvenido/a · welcome
+    </div>
+  `;
+}
+
+function goBack() {
+  document.getElementById('guideView').style.display = 'none';
+  document.getElementById('adminView').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+function printGuide() {
+  window.print();
+}
+
+// Init pin field
+onPropChange();
+</script>
+</body>
+</html>
